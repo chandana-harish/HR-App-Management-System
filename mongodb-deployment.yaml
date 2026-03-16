@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init-script
+data:
+  init.js: |
+    db = db.getSiblingDB('hr_system');
+    db.createUser({
+      user: "hrapp",
+      pwd: "hrapp123",
+      roles: [{ role: "readWrite", db: "hr_system" }]
+    });
+    db.hr_admins.insertOne({
+      adminId: "admin",
+      password: "admin123",
+      role: "super_admin",
+      createdAt: new Date(),
+      isActive: true
+    });
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:7.0
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "admin"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: "password123"
+        - name: MONGO_INITDB_DATABASE
+          value: "hr_system"
+        volumeMounts:
+        - name: mongo-init-script
+          mountPath: /docker-entrypoint-initdb.d
+      volumes:
+      - name: mongo-init-script
+        configMap:
+          name: mongo-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+  type: ClusterIP

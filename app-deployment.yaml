@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hr-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hr-app
+  template:
+    metadata:
+      labels:
+        app: hr-app
+    spec:
+      containers:
+      - name: hr-app
+        image: rishabhmishra01/hr-app-management-system-main-app:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          value: "mongodb://hrapp:hrapp123@mongodb-service:27017/hr_system"
+        - name: DB_NAME
+          value: "hr_system"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hr-service
+spec:
+  selector:
+    app: hr-app
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: LoadBalancer

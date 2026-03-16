@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Node.js Express Application
+  hr-app:
+    build: .
+    container_name: hr-express-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGO_URI=mongodb://mongodb:27017
+      - DB_NAME=hr_system
+      - PORT=3000
+    depends_on:
+      - mongodb
+    networks:
+      - hr-network
+    volumes:
+      - ./logs:/usr/src/app/logs
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const options = { host: 'localhost', port: 3000, path: '/', timeout: 2000 }; const req = http.request(options, (res) => { console.log('STATUS:', res.statusCode); process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => { process.exit(1); }); req.end();"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Database (without authentication for development)
+  mongodb:
+    image: mongo:7.0-jammy
+    container_name: hr-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data_dev:/data/db
+      - ./mongo-init-dev:/docker-entrypoint-initdb.d
+    networks:
+      - hr-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Express (for database management)
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: hr-mongo-express-dev
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH=false
+    depends_on:
+      - mongodb
+    networks:
+      - hr-network
+
+# Networks
+networks:
+  hr-network:
+    driver: bridge
+    name: hr-network-dev
+
+# Volumes
+volumes:
+  mongodb_data_dev:
+    driver: local
+    name: hr_mongodb_data_dev
