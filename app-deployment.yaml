@@ -19,10 +19,17 @@ spec:
         ports:
         - containerPort: 3000
         env:
-        - name: MONGO_URI
-          value: "mongodb://hrapp:hrapp123@mongodb-service:27017/hr_system"
-        - name: DB_NAME
-          value: "hr_system"
+          - name: MONGO_URI
+            valueFrom:
+              configMapKeyRef:
+                name: hr-app-config
+                key: MONGO_URI
+
+          - name: DB_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: hr-app-config
+                key: DB_NAME
 ---
 apiVersion: v1
 kind: Service
